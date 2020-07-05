@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.utils.timezone import now
 
 # Create your models here.
 
@@ -152,20 +153,41 @@ class Account(AbstractBaseUser):
 class Followers(models.Model):
     follower_id = models.ForeignKey(Account, related_name='followers', on_delete=models.CASCADE)
     followed_id = models.ForeignKey(Account, related_name='followed', on_delete=models.CASCADE)
-    follow_date = models.DateTimeField(auto_now_add=True)
+    follow_date = models.DateTimeField(default=now)
 
 class User_puntuation(models.Model):
-    evaluator_id = models.ForeignKey(Account, related_name='evaluator', on_delete=models.CASCADE)
-    evaluated_id = models.ForeignKey(Account, related_name='evaluated', on_delete=models.CASCADE)
-    follow_date = models.DateTimeField(auto_now_add=True)
-    puntuation = models.IntegerField()
-    
+    evaluated_user_id = models.ForeignKey(Account, related_name="evaluated_user", null=True, on_delete=models.CASCADE, verbose_name='Evaluado')
+    evaluator_user_id = models.ForeignKey(Account, related_name="evaluator_user", null=True, on_delete=models.CASCADE, verbose_name='Evaluador')
+    points = models.IntegerField(verbose_name='Puntos', null=True)
+    comment = models.TextField(null=True, verbose_name='Comentario')
+    follow_date = models.DateTimeField(default=now)
+
+
+    def __str__(self):
+
+        if self.evaluated_user is None:  
+            return self.evaluator_user.get_full_name()
+        else:
+            return self.evaluator_user.get_full_name()+' gave '+ str (self.points ) +' to '+ self.evaluated_user.get_full_name()
+
+    class Meta():
+        verbose_name= "Puntuation"
+        verbose_name_plural= "Puntuations"
+
 class Complaints(models.Model):
+    
+    accuser_user_id = models.ForeignKey(Account, related_name="accuser_user_id", on_delete=models.CASCADE, verbose_name='Denunciante')
+    denounced_user_id = models.ForeignKey(Account, related_name="denounced_user_id", null=True, on_delete=models.CASCADE, verbose_name='Denunciado')
+    problem = models.CharField(max_length=20,null=True, blank=False, verbose_name='Problema')
+    comment = models.TextField(null=True, verbose_name='Comentario')
+    published = models.DateTimeField(verbose_name="Fecha de publicacion", default=now)
 
-     date = models.DateTimeField(auto_now_add=True)
-     denounced_user_id = models.ForeignKey(Account, related_name='denounced_user', on_delete=models.CASCADE)
-     accuser_user_id = models.ForeignKey(Account, related_name='accuser_user', on_delete=models.CASCADE)
+    class Meta():
+        verbose_name = "Complaint"
+        verbose_name_plural = "Complaints"
 
+    def __str__(self): 
+        return self.accuser_user_id.get_full_name()
 
 class Currency(models.Model):
     name = models.CharField(max_length=100)
@@ -178,12 +200,13 @@ class Currency(models.Model):
         return f"Currency: {self.name}"
 
 class Category(models.Model):
-    name = models.CharField(max_length=50)
+    category_name = models.CharField(max_length=100,blank=False,null=True)
+    category_description = models.TextField(null=True, blank=False)
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Category: {self.name}"
+        return self.category_name
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
